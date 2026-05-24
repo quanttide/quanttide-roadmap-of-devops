@@ -1,64 +1,73 @@
-基于刚才完整的使用流程（install → status → sync），我的体验评估如下：
+# code 命令工作蓝图
 
----
+> 基于 `qtcloud-devops-cli v0.3.0` 实际使用体验整理
 
-## 使用体验评估
+## 一、体验摘要
 
-### ✅ 亮点
+2026-05-25 对 `code status` + `code sync` 进行了全流程实测，覆盖 17 个子模块的同步操作。整体评价：功能完整、自动化程度高，但存在状态误判和 CLI 设计一致性两个可改进点。
 
-**1. 全自动端到端同步**
-`code sync` 一条命令完成"推送子模块 → 更新父指针 → 推送父仓库"的完整链路，17 个子模块一次跑完零报错，这比手动操作节省大量时间。
+## 二、观测记录
 
-**2. `code status` 可视化**
-表格一目了然，干净/脏/领先等状态分类明确，聚合统计方便快速定位问题。
+### 2.1 状态误判
 
-**3. 命令层级清晰**
-```
-qtcloud-devops
-├── code      # Git 子模块管理
-├── stage     # 标记版本
-├── publish   # 正式发布
-├── cancel    # 取消发布
-└── retire    # 退役版本
-```
-命名直观，学习成本低。
+`code status` 将 `domains/quanttide-devops` 标记为 **Dirty**，但实际属于 **AheadOfParent**（子模块有新提交，父仓库未记录）。
 
-**4. 安装体验**
-`cargo install` 一次编译完成，二进制单文件，无 Python 虚拟环境依赖问题，比之前 uv tool 安装的 v0.1.0 更干净。
+**根因分析**：状态判定逻辑混用了"子模块工作区是否干净"和"父指针是否落后"两个维度。Dirty 应仅指子模块工作区有未提交修改，而父指针落后应归入 AheadOfParent。
 
-### ⚠️ 值得改进
+**影响**：用户拿到 Dirty 提示后不知道该做什么（提交还是同步），降低了工具的决策辅助价值。
 
-**1. 状态分类有 bug**
-`code status` 将 `domains/quanttide-devops` 标记为 **Dirty**（脏），但实际是父仓库未追踪子模块的新提交（即文档里定义的 **AheadOfParent** 状态）。子模块内部工作区是干净的。
+### 2.2 `--dry-run` 放置位置不直觉
 
-> 对照文档中的 7 种状态分类，这里应该是 `AheadOfParent / 领先`，建议修正状态判断逻辑。
-
-**2. `--dry-run` 位置不一致**
-`--dry-run` 挂在 `code` 级别（`code [OPTIONS] <COMMAND>`），而非 `sync` 级别。直觉上会在子命令后面找它：
+`--dry-run` 是 `code` 级别的选项，而非 `sync` / `status` 子命令级别的选项：
 
 ```
-qtcloud-devops code sync --dry-run   ❌ 不支持
-qtcloud-devops code --dry-run sync   ✅ 实际用法
+# 实际用法（违反直觉）
+qtcloud-devops code --dry-run sync
+
+# 直觉用法（当前不支持）
+qtcloud-devops code sync --dry-run
 ```
 
-建议每个子命令独立支持 `--dry-run`，或至少在 help 里醒目提示。
+**建议**：将 `--dry-run` 下放到每个子命令，或至少在 help 文本中醒目提示当前用法。
 
-**3. 进度反馈粒度粗**
-17 个子模块同步时，每行一个"已推送 + 已同步 + 已推送"，输出 17×3 = 51 行，信息冗余。更好的方式是每子模块一行，状态列显示进度：
+### 2.3 同步输出冗余
+
+同步 17 个子模块时，每行输出三段式信息（已推送 + 已同步 + 已推送父仓库），共生成 51 行日志。信息密度低，滚动查看困难。
+
+**建议**：改为单行聚合，例如：
 
 ```
- assets/quanttide-platform   ✓ 已推送 · 已同步 · 已推送父仓库
- domains/quanttide-devops    ✓ 已推送 · 已同步 · 已推送父仓库
+assets/quanttide-platform    ✓ push · sync · push-parent
+domains/quanttide-devops     ✓ push · sync · push-parent
 ```
 
-### 总结
+### 2.4 失败的子模块缺乏明确提示
 
-| 维度 | 评价 |
-|------|------|
-| 功能完整性 | ⭐⭐⭐⭐⭐ 覆盖子模块全生命周期 |
-| 自动化程度 | ⭐⭐⭐⭐⭐ 一条命令端到端 |
-| 用户界面 | ⭐⭐⭐⭐ 中文友好，表格清晰 |
-| 正确性 | ⭐⭐⭐ 状态分类有误判 |
-| CLI 设计一致性 | ⭐⭐⭐ `--dry-run` 位置不直觉 |
+如果某个子模块推送失败，当前输出中无法区分成功和失败。建议引入颜色或状态标记：
 
-**整体评分：4/5** — 工具能实际解决痛点，自动化程度高，几个小改进（状态分类 bug、`--dry-run` 位置）修复后体验会更完善。
+```
+assets/quanttide-platform    ✓ push · sync · push-parent
+domains/quanttide-devops     ✗ push: 权限不足  · 已跳过
+```
+
+## 三、改进方案
+
+| 优先级 | 问题 | 方案 | 涉及文件 |
+|--------|------|------|---------|
+| P0 | 状态误判 | 修正状态判定：工作区脏才标 Dirty，父指针落后标 AheadOfParent | `src/cli/code/status.rs` |
+| P1 | `--dry-run` 位置 | 下放到 `sync` / `status` / `retire` 各子命令 | `src/cli/code/mod.rs` |
+| P2 | 输出冗余 | 改为单行聚合格式 | `src/cli/code/sync.rs` 输出逻辑 |
+| P3 | 失败提示 | 引入颜色和 `✓` / `✗` 状态前缀 | `src/cli/code/sync.rs` 输出逻辑 |
+
+## 四、影响范围
+
+- `code status` 状态判定逻辑（P0 修复可能影响统计聚合）
+- `code sync` 输出格式（P2/P3 仅视觉改动，不影响功能）
+- `code --help` / `code sync --help` 帮助文本（P1 调整）
+- 各子命令的 test 用例需同步更新
+
+## 五、拒绝标准
+
+- [ ] P0 修复后：Dirty 列表不再包含纯 AheadOfParent 的子模块
+- [ ] P1 修复后：`code sync --dry-run` 通过编译并能正常执行 dry-run
+- [ ] P2/P3 修复后：17 个子模块输出在 20 行以内，失败项目显式标记
