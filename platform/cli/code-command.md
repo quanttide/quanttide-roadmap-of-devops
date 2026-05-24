@@ -88,3 +88,20 @@ domains/quanttide-devops     ✗ push: 权限不足  · 已跳过
 - [ ] P0 修复后：status 默认执行 fetch，远程有新 push 时正确显示 BehindRemote
 - [ ] P1 修复后：`code sync --dry-run` 通过编译并能正常执行 dry-run
 - [ ] P2/P3 修复后：17 个子模块输出在 20 行以内，失败项目显式标记
+
+## 六、常见错误与状态映射
+
+以下 Git 原生错误对应到工具状态机中的状态和建议操作：
+
+| Git 错误 | 工具状态 | 建议操作 |
+|---------|---------|---------|
+| Detached HEAD | `Detached` | `code sync <name>`（自动 checkout main 后 update）|
+| 重复子模块 | — | 去重 `.gitmodules` 后 `code sync` |
+| 空仓库 | `Uninitialized` | 先在远程仓库初始化并推送，再 `code sync` |
+| 远程未配置 | `BehindRemote` 🛰 | 子模块缺少 remote，需手动 `git remote add origin <url>` |
+| 未初始化 | `Uninitialized` | `git submodule update --init --recursive` |
+| 提交哈希冲突 | `Orphaned` | 父仓库记录的 commit 在远程不存在，需手动修复父指针 |
+| config 残留 | — | retire 已自动清理 config，若手动删除子模块需手动 `git config --remove-section` |
+| 未指定分支 | — | 子模块默认跟踪 HEAD，不构成独立错误 |
+
+工具的目标是消除这些错误的手动处理成本：用户只需执行 `code status` 了解状态，再执行对应的 `code` 命令即可，不需要手动查文档排查。
