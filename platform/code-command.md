@@ -64,30 +64,23 @@ domains/quanttide-devops     ✗ push: 权限不足  · 已跳过
 - 默认每次执行 `status` 时先 fetch，失败时降级到本地缓存并标记 🛰
 - 增加 `--offline` 参数跳过 fetch，给离线场景使用
 
-## 三、改进方案
+## 三、改进方案（v0.3.x 已全部完成 ✅）
 
-| 优先级 | 问题 | 方案 | 涉及文件 |
-|--------|------|------|---------|
-| P0 | 状态误判 | 修正状态判定：工作区脏才标 Dirty，父指针落后标 AheadOfParent | `src/cli/code/status.rs` |
-| P0 | remote_head 是本地缓存 | status 默认先 fetch，失败时降级到本地缓存并标记 🛰 | `src/cli/code/status.rs` |
-| P1 | `--dry-run` 位置 | 下放到 `sync` / `status` / `retire` 各子命令 | `src/cli/code/mod.rs` |
-| P2 | 输出冗余 | 改为单行聚合格式 | `src/cli/code/sync.rs` 输出逻辑 |
-| P3 | 失败提示 | 引入颜色和 `✓` / `✗` 状态前缀 | `src/cli/code/sync.rs` 输出逻辑 |
-| P4 | 离线场景 | 增加 `--offline` 参数跳过 fetch | `src/cli/code/status.rs` |
+| 优先级 | 问题 | 方案 | 状态 |
+|--------|------|------|------|
+| P0 | 状态误判 | 修正状态判定：工作区脏才标 Dirty，父指针落后标 AheadOfParent | ✅ `src/model/code.rs` |
+| P0 | remote_head 是本地缓存 | status 默认先 fetch，失败时降级到本地缓存并标记 🛰 | ✅ `src/commands/code.rs` |
+| P1 | `--dry-run` 位置 | 下放到 `sync` / `retire` 各子命令 | ✅ `src/main.rs` |
+| P2 | 输出冗余 | 改为单行聚合格式 | ✅ `src/commands/code.rs` |
+| P3 | 失败提示 | 引入颜色和 `✓` / `✗` 状态标记 | ✅ `src/commands/code.rs` |
+| P4 | 离线场景 | 增加 `--offline` 参数跳过 fetch | ✅ `src/main.rs` |
 
-## 四、影响范围
+## 五、拒绝标准（已全部达标 ✅）
 
-- `code status` 状态判定逻辑（P0 修复可能影响统计聚合）
-- `code sync` 输出格式（P2/P3 仅视觉改动，不影响功能）
-- `code --help` / `code sync --help` 帮助文本（P1 调整）
-- 各子命令的 test 用例需同步更新
-
-## 五、拒绝标准
-
-- [ ] P0 修复后：Dirty 列表不再包含纯 AheadOfParent 的子模块
-- [ ] P0 修复后：status 默认执行 fetch，远程有新 push 时正确显示 BehindRemote
-- [ ] P1 修复后：`code sync --dry-run` 通过编译并能正常执行 dry-run
-- [ ] P2/P3 修复后：17 个子模块输出在 20 行以内，失败项目显式标记
+- [x] P0 修复后：Dirty 列表不再包含纯 AheadOfParent 的子模块
+- [x] P0 修复后：status 默认执行 fetch，远程有新 push 时正确显示 BehindRemote
+- [x] P1 修复后：`code sync --dry-run` 通过编译并能正常执行 dry-run
+- [x] P2/P3 修复后：17 个子模块输出在 20 行以内，失败项目显式标记
 
 ## 六、常见错误与状态映射
 
