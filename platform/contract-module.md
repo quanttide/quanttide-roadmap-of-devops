@@ -4,21 +4,42 @@
 
 `contract.yaml` 解析、scope 发现、语言检测、版本状态聚合等功能在 `publish.rs`、`status.rs` 等多个命令中重复实现，需要提取为公共模块 `src/contract.rs`。
 
-## 职责
+## 四维架构
 
-契约承载从四维架构（Stages / Platforms / Sources / Scopes）到代码的映射。每个 scope 声明：
+契约按四维架构设计（参见 `docs/essay/contract/index.md`）：
 
-| 维度 | 表示 | 说明 |
-|------|------|------|
-| **Scopes** | `scopes.<name>.dir` | scope 对应的子目录 |
-| **Sources** | `language` / `framework` | 编程语言与框架，版本事实源的读取方式 |
-| **Platforms** | `registry` | 制品发布目标（crates.io / PyPI / pub.dev / npm / GitHub Releases / Docker） |
-| **Stages** | `release.changelog` / `release.pre_publish` | 发布阶段的配置项 |
+| 维度 | YAML 顶层 | 职责 |
+|------|-----------|------|
+| **Stages** | `stages` | 生命周期各阶段的配置（构建命令、测试阈值、发布前检查） |
+| **Platforms** | `platforms` | 外部治理载体（代码托管、CI、制品库） |
+| **Sources** | `sources` | 事实源定义（版本号读取方式、CHANGELOG 格式） |
+| **Scopes** | `scopes` | 上下文边界（每个 scope 可覆盖全局设置） |
 
 ## 模型
 
 ```yaml
 # .quanttide/devops/contract.yaml
+stages:
+  build:
+    command: cargo build --release
+  test:
+    command: cargo test
+    threshold: 80
+  release:
+    changelog: CHANGELOG.md
+    pre_publish:
+      - scripts/preflight.sh
+
+platforms:
+  source_control: github
+  ci: github_actions
+  artifact_registry: crates
+
+sources:
+  version:
+    type: cargo
+    path: Cargo.toml
+
 scopes:
   cli:
     dir: src/cli
@@ -26,36 +47,38 @@ scopes:
     framework: clap
     build_tool: cargo
     registry: crates
+  studio:
+    dir: src/studio
+    language: dart
+    framework: flutter
+    build_tool: flutter
+    registry: pubdev
     release:
-      changelog: CHANGELOG.md
-      pre_publish:
-        - scripts/preflight.sh
+      changelog: src/studio/CHANGELOG.md
 ```
 
 ```rust
-pub struct Scope {
-    pub name: String,           // scope 名称（= tag 前缀）
-    pub dir: String,            // scope 子目录
-    pub language: Language,     // Rust / Python / Go / Dart / TypeScript
-    pub framework: String,      // 框架名（clap / axum / flutter / gin）
-    pub build_tool: BuildTool,  // Cargo / Uv / Go / Flutter / Npm
-    pub registry: Registry,     // Crates / PyPI / PubDev / Npm / GitHubReleases / Docker
-    pub release: ReleaseConfig, // CHANGELOG 路径、发布前 hook
+pub struct Contract {
+    pub stages: Stages,         // build / test / release
+    pub platforms: Platforms,   // source_control / ci / artifact_registry
+    pub sources: Sources,       // version (type + path)
+    pub scopes: Vec<Scope>,     // 每个 scope 继承 + 覆盖全局
 }
 ```
 
 ## 用法
 
 ```rust
-let scopes = contract::load_scopes(repo_path);       // → Vec<Scope>
-let lang = contract::resolve_language(&scope, dir);   // → Language（声明优先，fallback 检测）
-let lang = contract::detect_language_by_files(dir);   // → Language（仅文件检测）
-let status = contract::version_status(&scope);        // → VersionStatus
+let c = contract::load(repo_path);                    // → Contract（完整四维）
+let scopes = contract::load_scopes(repo_path);         // → Vec<Scope>（简化）
+let lang = contract::resolve_language(&scope, dir);    // → Language（声明优先）
+let lang = contract::detect_by_files(dir);             // → Language（仅文件）
+let threshold = contract::scope_test_threshold(&c, s); // → f64（scope > 全局）
 ```
 
 ## 向后兼容
 
-旧格式（`scopes: { cli: src/cli }`）通过 `fallback_parse` 支持，自动检测语言。
+旧格式（`scopes: { cli: src/cli }`）自动识别，使用全局默认值。
 
 ## 优先级
 
@@ -63,4 +86,4 @@ let status = contract::version_status(&scope);        // → VersionStatus
 
 ## 实验室验证
 
-已在 `examples/default/src/contract.rs` 实现完整模型 + 18 个测试，两种格式（新旧）解析、语言/框架/制品库/发布配置全覆盖。
+已在 `examples/default/src/contract.rs` 实现完整四维模型 + 38 个测试，覆盖新旧格式、四维配置、声明/自动语言检测、版本状态、阈值继承。
