@@ -33,4 +33,4 @@ monitor  → qtcloud-devops monitor     （待实现）
 | 语言检测 | 无，每个命令自处理 | `detect_language(path)` → `Language` |
 | 版本状态聚合 | `release::util` 的 get_latest_tag、normalize_version | `version_status(scope)` → `VersionStatus` |
 
-优先级：低。不影响现有功能，等第三个命令（build）实现时再做。
+优先级：高。契约（Contract）是核心领域概念，scope 解析、语言检测、版本状态聚合都属于契约的职责。在 build 命令实现前先提取，后续直接复用。
