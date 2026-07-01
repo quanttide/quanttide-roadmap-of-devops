@@ -22,15 +22,3 @@ monitor  → qtcloud-devops monitor     （待实现）
 ```
 
 手册不讲通用知识，只展示 CLI 如何简化该环节的管理。
-
-## 跨命令公共能力提取
-
-以下功能在多个命令中重复实现，应提取为公共模块（`src/contract.rs`）：
-
-| 功能 | 当前分布 | 用法 |
-|------|---------|------|
-| scope 解析（contract.yaml → scope→dir） | `publish.rs`、`status.rs` 各有一套 | `load_scopes(repo_path)` → `Vec<Scope>` |
-| 语言检测 | 无，每个命令自处理 | `detect_language(path)` → `Language` |
-| 版本状态聚合 | `release::util` 的 get_latest_tag、normalize_version | `version_status(scope)` → `VersionStatus` |
-
-优先级：高。契约（Contract）是核心领域概念，scope 解析、语言检测、版本状态聚合都属于契约的职责。在 build 命令实现前先提取，后续直接复用。
