@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [0.2.0] - 2026-07-02
+
+### Added
+- CLI v0.7.1 发布：代码质量与测试基础设施升级
+  - git2 替换全部生产代码 `Command::new("git")`
+  - PATH mock 编排层测试（21 个场景覆盖 gh/cargo/build/test/release）
+  - gh mock 全覆盖（run list / release create / release view 共 14 场景）
+- 测试覆盖率 87.81% 行 / 90.75% 函数（llvm-cov）
+- toolkit v0.1.3 适配 + contract.rs 100% 覆盖
+
+### Changed
+- 纯函数提取（parse_gh_run_list / check_command / test_command 等 6 个）
+- 契约四维架构 document: contract.yaml 格式适配 v0.1.3
+
 ## [0.1.0] - 2026-07-02
 
 ### Added
