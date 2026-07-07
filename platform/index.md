@@ -15,7 +15,7 @@ operate  → qtcloud-devops operate     （待实现）
 monitor  → qtcloud-devops monitor     （待实现）
 ```
 
-每个阶段一页命令参考（`docs/handbook/lifecycle/`），格式统一：
+每个阶段一页命令参考（`docs/handbook/stage/`），格式统一：
 
 ```
 操作前检查 → 执行操作 → 操作后验证
