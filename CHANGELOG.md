@@ -1,18 +1,25 @@
 # CHANGELOG
 
-## [0.2.0] - 2026-07-02
+## [0.2.0] - 2026-07-07
 
 ### Added
-- CLI v0.7.1 发布：代码质量与测试基础设施升级
-  - git2 替换全部生产代码 `Command::new("git")`
-  - PATH mock 编排层测试（21 个场景覆盖 gh/cargo/build/test/release）
-  - gh mock 全覆盖（run list / release create / release view 共 14 场景）
-- 测试覆盖率 87.81% 行 / 90.75% 函数（llvm-cov）
-- toolkit v0.1.3 适配 + contract.rs 100% 覆盖
+- `stage/release-publish.md`：release publish 改进路线图（P0-P3）
+- `stage/plan-sync.md`：plan sync 命令设计方案
 
 ### Changed
-- 纯函数提取（parse_gh_run_list / check_command / test_command 等 6 个）
-- 契约四维架构 document: contract.yaml 格式适配 v0.1.3
+- `stage/plan.md` 重命名为 `stage/plan_sync.md` → `stage/plan-sync.md`
+- 平台愿景文档移至 `data/intention/stage/`
+- bug 报告移至 GitHub Issues（qtcloud-devops#17）
+- 代码同步状态规范移至 `data/context/specification/`
+- 历史记录移至 `data/history/`
+
+### Removed
+- `platform/bug.md`（移至 GitHub Issues）
+- `platform/plan-command-bug.md`（内容过时）
+- `platform/release-command-enhance.md`（内容过时）
+- `platform/index.md`（移至 intention）
+- `specification/code-sync-status.md`（移至 context）
+- `history/index.md`（移至 history 子模块）
 
 ## [0.1.0] - 2026-07-02
 
